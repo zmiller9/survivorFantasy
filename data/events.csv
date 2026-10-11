@@ -20,17 +20,17 @@ episode,castaway,action,points
 1,Patt,Survives episode,1
 1,Kristin,Survives episode,1
 1,Rob,Acquires idol,10
-1,Sharonda,Tribe wins immunity,3
-1,Alexis,Tribe wins immunity,3
-1,Linnea,Tribe wins immunity,3
-1,Cristian,Tribe wins immunity,3
-1,Kristin,Tribe wins immunity,3
-1,Ori,Tribe wins immunity,3
-1,Carter,Tribe wins immunity,3
-1,Eric,Tribe wins immunity,3
-1,Rob,Tribe wins immunity,3
-1,Ana,Tribe wins immunity,3
-1,Devin,Most confessionals in the episode,2
+1,Sharonda,Tribal immunity,3
+1,Alexis,Tribal immunity,3
+1,Linnea,Tribal immunity,3
+1,Cristian,Tribal immunity,3
+1,Kristin,Tribal immunity,3
+1,Ori,Tribal immunity,3
+1,Carter,Tribal immunity,3
+1,Eric,Tribal immunity,3
+1,Rob,Tribal immunity,3
+1,Ana,Tribal immunity,3
+1,Devin,Most confessionals,2
 2,Mike,Survives episode,1
 2,Sharonda,Survives episode,1
 2,Jelly,Survives episode,1
@@ -51,29 +51,29 @@ episode,castaway,action,points
 2,Patt,Survives episode,1
 2,Kristin,Survives episode,1
 2,Jelly,Acquires idol,10
-2,Brady,Tribe wins reward,2
-2,Devin,Tribe wins reward,2
-2,Jelly,Tribe wins reward,2
-2,Kilby,Tribe wins reward,2
-2,Jenna,Tribe wins reward,2
-2,Mike,Tribe wins reward,2
-2,Patt,Tribe wins reward,2
-2,Thien An,Tribe wins reward,2
-2,Maggie,Tribe wins reward,2
-2,Lewis,Tribe wins reward,2
-2,Brady,Tribe wins immunity,3
-2,Devin,Tribe wins immunity,3
-2,Jelly,Tribe wins immunity,3
-2,Kilby,Tribe wins immunity,3
-2,Jenna,Tribe wins immunity,3
-2,Mike,Tribe wins immunity,3
-2,Patt,Tribe wins immunity,3
-2,Thien An,Tribe wins immunity,3
-2,Maggie,Tribe wins immunity,3
-2,Lewis,Tribe wins immunity,3
-2,Linnea,Most confessionals in the episode,2
-2,Sharonda,Most confessionals in the episode,2
-2,Rob,Most confessionals in the episode,2
+2,Brady,Tribal reward,2
+2,Devin,Tribal reward,2
+2,Jelly,Tribal reward,2
+2,Kilby,Tribal reward,2
+2,Jenna,Tribal reward,2
+2,Mike,Tribal reward,2
+2,Patt,Tribal reward,2
+2,Thien An,Tribal reward,2
+2,Maggie,Tribal reward,2
+2,Lewis,Tribal reward,2
+2,Brady,Tribal immunity,3
+2,Devin,Tribal immunity,3
+2,Jelly,Tribal immunity,3
+2,Kilby,Tribal immunity,3
+2,Jenna,Tribal immunity,3
+2,Mike,Tribal immunity,3
+2,Patt,Tribal immunity,3
+2,Thien An,Tribal immunity,3
+2,Maggie,Tribal immunity,3
+2,Lewis,Tribal immunity,3
+2,Linnea,Most confessionals,2
+2,Sharonda,Most confessionals,2
+2,Rob,Most confessionals,2
 3,Sharonda,Survives episode,1
 3,Alexis,Survives episode,1
 3,Linnea,Survives episode,1
@@ -92,19 +92,22 @@ episode,castaway,action,points
 3,Maggie,Survives episode,1
 3,Lewis,Survives episode,1
 3,Rob,Quits,-50
-3,Sharonda,Tribe wins immunity,3
-3,Alexis,Tribe wins immunity,3
-3,Linnea,Tribe wins immunity,3
-3,Cristian,Tribe wins immunity,3
-3,Kristin,Tribe wins immunity,3
-3,Ori,Tribe wins immunity,3
-3,Eric,Tribe wins immunity,3
-3,Sharonda,Tribe wins reward,2
-3,Alexis,Tribe wins reward,2
-3,Linnea,Tribe wins reward,2
-3,Cristian,Tribe wins reward,2
-3,Kristin,Tribe wins reward,2
-3,Ori,Tribe wins reward,2
-3,Eric,Tribe wins reward,2
-3,Carter,Most confessionals in the episode,2
-3,Devin,Most confessionals in the episode,2
+3,Sharonda,Tribal immunity,3
+3,Alexis,Tribal immunity,3
+3,Linnea,Tribal immunity,3
+3,Cristian,Tribal immunity,3
+3,Kristin,Tribal immunity,3
+3,Ori,Tribal immunity,3
+3,Eric,Tribal immunity,3
+3,Sharonda,Tribal reward,2
+3,Alexis,Tribal reward,2
+3,Linnea,Tribal reward,2
+3,Cristian,Tribal reward,2
+3,Kristin,Tribal reward,2
+3,Ori,Tribal reward,2
+3,Eric,Tribal reward,2
+3,Carter,Most confessionals,2
+3,Devin,Most confessionals,2
+3,Brady,Acquires advantage,5
+3,Maggie,Acquires advantage,5
+3,Devin,Acquires advantage,5
