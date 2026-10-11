@@ -165,7 +165,7 @@
     <div class="grid">
       <div>
         <h3>By castaway</h3>
-        <div class="chart-box" id="boxContestant"><canvas id="contestantChart"></canvas></div>
+        <div class="chart-box" id="boxcastaway"><canvas id="castawayChart"></canvas></div>
       </div>
       <div>
         <h3>By action</h3>
@@ -206,7 +206,7 @@ const D = {};   // loaded + derived data
 const state = {
   through: 1,
   player: ALL,
-  filter: { contestant: null, episode: null, action: null }
+  filter: { castaway: null, episode: null, action: null }
 };
 const charts = {};
 
@@ -268,7 +268,7 @@ async function init() {
   D.color = Object.fromEntries(D.players.map((m, i) => [m, MEMBER_COLORS[i % MEMBER_COLORS.length]]));
   D.owner = {};
   D.picks = Object.fromEntries(D.players.map((m) => [m, []]));
-  drafts.forEach((d) => { D.owner[d.contestant] = d.player; D.picks[d.player].push(d.contestant); });
+  drafts.forEach((d) => { D.owner[d.castaway] = d.player; D.picks[d.player].push(d.castaway); });
 
   const unknown = new Set();
   const bad = [];
@@ -276,10 +276,10 @@ async function init() {
   events.forEach((e, i) => {
     const ep = parseInt(e.episode, 10), points = parseFloat(e.points);
     if (!Number.isFinite(ep) || !Number.isFinite(points)) { bad.push(i + 2); return; }
-    if (!D.owner[e.contestant]) { unknown.add(e.contestant); return; }
-    D.events.push({ ep, contestant: e.contestant, action: e.action, points, player: D.owner[e.contestant] });
+    if (!D.owner[e.castaway]) { unknown.add(e.castaway); return; }
+    D.events.push({ ep, castaway: e.castaway, action: e.action, points, player: D.owner[e.castaway] });
   });
-  if (unknown.size) notice(`<strong>Some contestants aren't in drafts.csv</strong> and were skipped: ${[...unknown].map(esc).join(", ")}. Check spelling.`);
+  if (unknown.size) notice(`<strong>Some castaways aren't in drafts.csv</strong> and were skipped: ${[...unknown].map(esc).join(", ")}. Check spelling.`);
   if (bad.length) notice(`<strong>Some rows in events.csv were skipped</strong> because the episode or points weren't numbers (rows ${bad.slice(0, 10).join(", ")}${bad.length > 10 ? "…" : ""}).`);
 
   D.maxEp = Math.max(1, ...D.events.map((e) => e.ep));
@@ -393,7 +393,7 @@ function renderWeekly() {
  * ------------------------------------------------------------------ */
 function selectPlayer(player, scroll) {
   state.player = player;
-  state.filter = { contestant: null, episode: null, action: null };
+  state.filter = { castaway: null, episode: null, action: null };
   renderDrill();
   if (scroll) $("drill").scrollIntoView();
 }
@@ -409,7 +409,7 @@ function drillRows(ignore) {
   const f = state.filter;
   return visibleEvents().filter((e) =>
     (state.player === ALL || e.player === state.player) &&
-    (ignore === "contestant" || !f.contestant || e.contestant === f.contestant) &&
+    (ignore === "castaway" || !f.castaway || e.castaway === f.castaway) &&
     (ignore === "episode" || !f.episode || e.ep === f.episode) &&
     (ignore === "action" || !f.action || e.action === f.action));
 }
@@ -417,7 +417,7 @@ function drillRows(ignore) {
 function renderDrill() {
   renderChips();
   renderSummary();
-  renderContestantChart();
+  renderCastawayChart();
   renderActionChart();
   renderEpisodeChart();
   renderEvents();
@@ -435,13 +435,13 @@ function renderSummary() {
   const rows = drillRows();
   const f = state.filter;
   const who = state.player === ALL ? "Everyone" : state.player;
-  const active = f.contestant || f.episode || f.action;
+  const active = f.castaway || f.episode || f.action;
   $("summary").textContent = active
     ? `${who}: ${fmt(sum(rows))} points from ${rows.length} events`
     : `${who}: ${fmt(sum(rows))} points through episode ${state.through}`;
 
   const tags = [];
-  if (f.contestant) tags.push(["contestant", "Pick: " + f.contestant]);
+  if (f.castaway) tags.push(["castaway", "Pick: " + f.castaway]);
   if (f.episode) tags.push(["episode", "Episode " + f.episode]);
   if (f.action) tags.push(["action", "Action: " + f.action]);
   $("filters").innerHTML = tags.length
@@ -471,14 +471,14 @@ function barChart(key, boxId, labels, values, colors, dim, indexAxis) {
   });
 }
 
-function renderContestantChart() {
-  const rows = drillRows("contestant");
-  const totals = groupSum(rows, (r) => r.contestant);
+function renderCastawayChart() {
+  const rows = drillRows("castaway");
+  const totals = groupSum(rows, (r) => r.castaway);
   const pool = state.player === ALL ? Object.keys(D.owner) : D.picks[state.player];
   const labels = pool.slice().sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0));
-  const sel = state.filter.contestant;
+  const sel = state.filter.castaway;
   const colors = labels.map((c) => hexA(D.color[D.owner[c]], sel && sel !== c ? 0.3 : 1));
-  barChart("contestant", "boxContestant", labels, labels.map((c) => totals.get(c) || 0), colors, "contestant", "y");
+  barChart("castaway", "boxCastaway", labels, labels.map((c) => totals.get(c) || 0), colors, "castaway", "y");
 }
 
 function renderActionChart() {
@@ -500,7 +500,7 @@ function renderEpisodeChart() {
     series = D.players.map((m) => ({ name: m, base: D.color[m], match: (r) => r.player === m }));
   } else {
     const shades = [1, 0.7, 0.45];
-    series = D.picks[state.player].map((c, i) => ({ name: c, base: D.color[state.player], alpha: shades[i % 3], match: (r) => r.contestant === c }));
+    series = D.picks[state.player].map((c, i) => ({ name: c, base: D.color[state.player], alpha: shades[i % 3], match: (r) => r.castaway === c }));
   }
   const datasets = series.map((s) => ({
     label: s.name,
@@ -524,11 +524,11 @@ function renderEpisodeChart() {
 }
 
 function renderEvents() {
-  const rows = drillRows().slice().sort((a, b) => b.ep - a.ep || a.contestant.localeCompare(b.contestant) || b.points - a.points);
+  const rows = drillRows().slice().sort((a, b) => b.ep - a.ep || a.castaway.localeCompare(b.castaway) || b.points - a.points);
   const showPlayer = state.player === ALL;
   const head = `<thead><tr><th>Episode</th><th>Castaway</th>${showPlayer ? "<th>Player</th>" : ""}<th>Action</th><th>Points</th></tr></thead>`;
   const body = rows.length
-    ? rows.map((r) => `<tr><td>${r.ep}</td><td>${esc(r.contestant)}</td>${showPlayer ? `<td>${esc(r.player)}</td>` : ""}<td>${esc(r.action)}</td><td>${signed(r.points)}</td></tr>`).join("")
+    ? rows.map((r) => `<tr><td>${r.ep}</td><td>${esc(r.castaway)}</td>${showPlayer ? `<td>${esc(r.player)}</td>` : ""}<td>${esc(r.action)}</td><td>${signed(r.points)}</td></tr>`).join("")
     : `<tr><td colspan="${showPlayer ? 5 : 4}" class="hint">No scoring events match these filters.</td></tr>`;
   $("eventsTable").innerHTML = head + `<tbody>${body}</tbody>`;
 }
