@@ -169,7 +169,7 @@
       </div>
       <div>
         <h3>By event</h3>
-        <div class="chart-box" id="boxEvent"><canvas id="eventChart"></canvas></div>
+        <div class="chart-box" id="boxAction"><canvas id="actionChart"></canvas></div>
       </div>
       <div class="wide">
         <h3>By episode</h3>
@@ -206,7 +206,7 @@ const D = {};   // loaded + derived data
 const state = {
   through: 1,
   player: ALL,
-  filter: { castaway: null, episode: null, event: null }
+  filter: { castaway: null, episode: null, action: null }
 };
 const charts = {};
 
@@ -277,7 +277,7 @@ async function init() {
     const ep = parseInt(e.episode, 10), points = parseFloat(e.points);
     if (!Number.isFinite(ep) || !Number.isFinite(points)) { bad.push(i + 2); return; }
     if (!D.owner[e.castaway]) { unknown.add(e.castaway); return; }
-    D.events.push({ ep, castaway: e.castaway, action: e.event, points, player: D.owner[e.castaway] });
+    D.events.push({ ep, castaway: e.castaway, action: e.event ?? e.action, points, player: D.owner[e.castaway] });
   });
   if (unknown.size) notice(`<strong>Some castaways aren't in drafts.csv</strong> and were skipped: ${[...unknown].map(esc).join(", ")}. Check spelling.`);
   if (bad.length) notice(`<strong>Some rows in events.csv were skipped</strong> because the episode or points weren't numbers (rows ${bad.slice(0, 10).join(", ")}${bad.length > 10 ? "…" : ""}).`);
@@ -350,7 +350,7 @@ function renderRace() {
     data: { labels: eps.map((e) => "Ep " + e), datasets },
     options: {
       maintainAspectRatio: false,
-      interevent: { mode: "nearest", intersect: false, axis: "x" },
+      interaction: { mode: "nearest", intersect: false, axis: "x" },
       scales: { y: { beginAtZero: true, grid: { color: "#C5D2CA" }, title: { display: true, text: "Total points" } }, x: { grid: { display: false } } },
       plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 10 } } },
       onClick: (_, els) => { if (els.length) selectPlayer(datasets[els[0].datasetIndex].label, true); }
@@ -393,7 +393,7 @@ function renderWeekly() {
  * ------------------------------------------------------------------ */
 function selectPlayer(player, scroll) {
   state.player = player;
-  state.filter = { castaway: null, episode: null, event: null };
+  state.filter = { castaway: null, episode: null, action: null };
   renderDrill();
   if (scroll) $("drill").scrollIntoView();
 }
@@ -411,14 +411,14 @@ function drillRows(ignore) {
     (state.player === ALL || e.player === state.player) &&
     (ignore === "castaway" || !f.castaway || e.castaway === f.castaway) &&
     (ignore === "episode" || !f.episode || e.ep === f.episode) &&
-    (ignore === "event" || !f.event || e.event === f.event));
+    (ignore === "action" || !f.action || e.action === f.action));
 }
 
 function renderDrill() {
   renderChips();
   renderSummary();
   renderCastawayChart();
-  renderEventChart();
+  renderActionChart();
   renderEpisodeChart();
   renderEvents();
 }
@@ -435,7 +435,7 @@ function renderSummary() {
   const rows = drillRows();
   const f = state.filter;
   const who = state.player === ALL ? "Everyone" : state.player;
-  const active = f.castaway || f.episode || f.event;
+  const active = f.castaway || f.episode || f.action;
   $("summary").textContent = active
     ? `${who}: ${fmt(sum(rows))} points from ${rows.length} events`
     : `${who}: ${fmt(sum(rows))} points through episode ${state.through}`;
@@ -443,7 +443,7 @@ function renderSummary() {
   const tags = [];
   if (f.castaway) tags.push(["castaway", "Pick: " + f.castaway]);
   if (f.episode) tags.push(["episode", "Episode " + f.episode]);
-  if (f.event) tags.push(["event", "Event: " + f.event]);
+  if (f.action) tags.push(["action", "Event: " + f.action]);
   $("filters").innerHTML = tags.length
     ? tags.map(([dim, label]) => `<button class="filter-tag" data-dim="${dim}" aria-label="Remove filter: ${esc(label)}">${esc(label)} ✕</button>`).join("")
     : `<span class="hint">Select a bar to filter.</span>`;
@@ -481,14 +481,14 @@ function renderCastawayChart() {
   barChart("castaway", "boxCastaway", labels, labels.map((c) => totals.get(c) || 0), colors, "castaway", "y");
 }
 
-function renderEventChart() {
-  const rows = drillRows("event");
-  const totals = groupSum(rows, (r) => r.event);
-  const labels = D.events.slice().sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0)).filter((a) => totals.has(a));
+function renderActionChart() {
+  const rows = drillRows("action");
+  const totals = groupSum(rows, (r) => r.action);
+  const labels = D.actions.slice().sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0)).filter((a) => totals.has(a));
   const base = state.player === ALL ? "#4F6D5F" : D.color[state.player];
-  const sel = state.filter.event;
+  const sel = state.filter.action;
   const colors = labels.map((a) => hexA(base, sel && sel !== a ? 0.3 : 1));
-  barChart("event", "boxEvent", labels, labels.map((a) => totals.get(a)), colors, "event", "y");
+  barChart("action", "boxAction", labels, labels.map((a) => totals.get(a)), colors, "action", "y");
 }
 
 function renderEpisodeChart() {
@@ -528,7 +528,7 @@ function renderEvents() {
   const showPlayer = state.player === ALL;
   const head = `<thead><tr><th>Episode</th><th>Castaway</th>${showPlayer ? "<th>Player</th>" : ""}<th>Event</th><th>Points</th></tr></thead>`;
   const body = rows.length
-    ? rows.map((r) => `<tr><td>${r.ep}</td><td>${esc(r.castaway)}</td>${showPlayer ? `<td>${esc(r.player)}</td>` : ""}<td>${esc(r.event)}</td><td>${signed(r.points)}</td></tr>`).join("")
+    ? rows.map((r) => `<tr><td>${r.ep}</td><td>${esc(r.castaway)}</td>${showPlayer ? `<td>${esc(r.player)}</td>` : ""}<td>${esc(r.action)}</td><td>${signed(r.points)}</td></tr>`).join("")
     : `<tr><td colspan="${showPlayer ? 5 : 4}" class="hint">No scoring events match these filters.</td></tr>`;
   $("eventsTable").innerHTML = head + `<tbody>${body}</tbody>`;
 }
