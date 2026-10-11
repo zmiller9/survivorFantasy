@@ -138,33 +138,33 @@
 
   <section id="standings">
     <h2>Standings</h2>
-    <p class="lede">Total points for each member. Select a member to see where their points came from.</p>
-    <div class="lb-head"><span>Rank</span><span>Member</span><span></span><span>Total</span><span id="deltaHead"></span></div>
+    <p class="lede">Total points for each player. Select a player to see where their points came from.</p>
+    <div class="lb-head"><span>Rank</span><span>Player</span><span></span><span>Total</span><span id="deltaHead"></span></div>
     <div class="lb" id="leaderboard"></div>
   </section>
 
   <section id="race">
     <h2>Score race</h2>
     <p class="lede">Running total after each episode.</p>
-    <div class="chart-box" style="height: 380px"><canvas id="raceChart" role="img" aria-label="Line chart of each member's running total by episode"></canvas></div>
+    <div class="chart-box" style="height: 380px"><canvas id="raceChart" role="img" aria-label="Line chart of each player's running total by episode"></canvas></div>
   </section>
 
   <section id="weekly">
     <h2>Week by week</h2>
-    <p class="lede">Points each member earned in each episode. Select a cell to see the scoring events behind it.</p>
+    <p class="lede">Points each player earned in each episode. Select a cell to see the scoring events behind it.</p>
     <div class="scroll"><table id="weeklyTable"></table></div>
   </section>
 
   <section id="drill">
     <h2>Where the points came from</h2>
-    <p class="lede">Pick a member, then select any bar to filter the other charts and the event list below.</p>
-    <div class="chips" id="memberChips" role="group" aria-label="Member"></div>
+    <p class="lede">Pick a player, then select any bar to filter the other charts and the event list below.</p>
+    <div class="chips" id="playerChips" role="group" aria-label="Player"></div>
     <p class="summary" id="summary"></p>
     <div class="filters" id="filters"></div>
 
     <div class="grid">
       <div>
-        <h3>By draft pick</h3>
+        <h3>By castaway</h3>
         <div class="chart-box" id="boxContestant"><canvas id="contestantChart"></canvas></div>
       </div>
       <div>
@@ -192,7 +192,7 @@
  * ------------------------------------------------------------------ */
 const DATA = { drafts: "data/drafts.csv", events: "data/events.csv" };
 
-// One colour per member, in the order members first appear in drafts.csv.
+// One colour per player, in the order players first appear in drafts.csv.
 // Chosen to stay distinguishable for most types of colour blindness.
 const MEMBER_COLORS = ["#E69F00", "#2E86C1", "#009E73", "#D55E00", "#CC79A7", "#6B4E9B", "#4F6D5F"];
 
@@ -205,7 +205,7 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 const D = {};   // loaded + derived data
 const state = {
   through: 1,
-  member: ALL,
+  player: ALL,
   filter: { contestant: null, episode: null, action: null }
 };
 const charts = {};
@@ -264,11 +264,11 @@ async function init() {
     return;
   }
 
-  D.members = [...new Set(drafts.map((d) => d.member))];
-  D.color = Object.fromEntries(D.members.map((m, i) => [m, MEMBER_COLORS[i % MEMBER_COLORS.length]]));
+  D.players = [...new Set(drafts.map((d) => d.player))];
+  D.color = Object.fromEntries(D.players.map((m, i) => [m, MEMBER_COLORS[i % MEMBER_COLORS.length]]));
   D.owner = {};
-  D.picks = Object.fromEntries(D.members.map((m) => [m, []]));
-  drafts.forEach((d) => { D.owner[d.contestant] = d.member; D.picks[d.member].push(d.contestant); });
+  D.picks = Object.fromEntries(D.players.map((m) => [m, []]));
+  drafts.forEach((d) => { D.owner[d.contestant] = d.player; D.picks[d.player].push(d.contestant); });
 
   const unknown = new Set();
   const bad = [];
@@ -277,7 +277,7 @@ async function init() {
     const ep = parseInt(e.episode, 10), points = parseFloat(e.points);
     if (!Number.isFinite(ep) || !Number.isFinite(points)) { bad.push(i + 2); return; }
     if (!D.owner[e.contestant]) { unknown.add(e.contestant); return; }
-    D.events.push({ ep, contestant: e.contestant, action: e.action, points, member: D.owner[e.contestant] });
+    D.events.push({ ep, contestant: e.contestant, action: e.action, points, player: D.owner[e.contestant] });
   });
   if (unknown.size) notice(`<strong>Some contestants aren't in drafts.csv</strong> and were skipped: ${[...unknown].map(esc).join(", ")}. Check spelling.`);
   if (bad.length) notice(`<strong>Some rows in events.csv were skipped</strong> because the episode or points weren't numbers (rows ${bad.slice(0, 10).join(", ")}${bad.length > 10 ? "…" : ""}).`);
@@ -305,10 +305,10 @@ const visibleEvents = () => D.events.filter((e) => e.ep <= state.through);
  * ------------------------------------------------------------------ */
 function renderStandings() {
   const evs = visibleEvents();
-  const rows = D.members.map((m) => ({
-    member: m,
-    total: sum(evs.filter((e) => e.member === m)),
-    week: sum(evs.filter((e) => e.member === m && e.ep === state.through))
+  const rows = D.players.map((m) => ({
+    player: m,
+    total: sum(evs.filter((e) => e.player === m)),
+    week: sum(evs.filter((e) => e.player === m && e.ep === state.through))
   })).sort((a, b) => b.total - a.total);
 
   const max = Math.max(1, ...rows.map((r) => r.total));
@@ -317,16 +317,16 @@ function renderStandings() {
 
   $("deltaHead").textContent = `Ep ${state.through}`;
   $("leaderboard").innerHTML = rows.map((r) => `
-    <button class="lb-row" data-member="${esc(r.member)}" aria-label="${esc(r.member)}, rank ${r.rank}, ${fmt(r.total)} points. Show breakdown.">
+    <button class="lb-row" data-player="${esc(r.player)}" aria-label="${esc(r.player)}, rank ${r.rank}, ${fmt(r.total)} points. Show breakdown.">
       <span class="lb-rank">${r.rank}</span>
-      <span class="lb-name">${esc(r.member)}<span class="lb-picks">${D.picks[r.member].map(esc).join(", ")}</span></span>
-      <span class="lb-bar"><span style="width:${Math.max(0, r.total / max * 100)}%; background:${D.color[r.member]}"></span></span>
+      <span class="lb-name">${esc(r.player)}<span class="lb-picks">${D.picks[r.player].map(esc).join(", ")}</span></span>
+      <span class="lb-bar"><span style="width:${Math.max(0, r.total / max * 100)}%; background:${D.color[r.player]}"></span></span>
       <span class="lb-total">${fmt(r.total)}</span>
       <span class="lb-delta">${signed(r.week)}</span>
     </button>`).join("");
 
   document.querySelectorAll(".lb-row").forEach((b) =>
-    b.addEventListener("click", () => selectMember(b.dataset.member, true)));
+    b.addEventListener("click", () => selectPlayer(b.dataset.player, true)));
 }
 
 /* ------------------------------------------------------------------ *
@@ -335,11 +335,11 @@ function renderStandings() {
 function renderRace() {
   const eps = Array.from({ length: state.through }, (_, i) => i + 1);
   const evs = visibleEvents();
-  const datasets = D.members.map((m) => {
+  const datasets = D.players.map((m) => {
     let running = 0;
     return {
       label: m,
-      data: eps.map((ep) => (running += sum(evs.filter((e) => e.member === m && e.ep === ep)))),
+      data: eps.map((ep) => (running += sum(evs.filter((e) => e.player === m && e.ep === ep)))),
       borderColor: D.color[m], backgroundColor: D.color[m],
       borderWidth: 3, pointRadius: 4, pointHoverRadius: 6, tension: 0.15
     };
@@ -353,7 +353,7 @@ function renderRace() {
       interaction: { mode: "nearest", intersect: false, axis: "x" },
       scales: { y: { beginAtZero: true, grid: { color: "#C5D2CA" }, title: { display: true, text: "Total points" } }, x: { grid: { display: false } } },
       plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 10 } } },
-      onClick: (_, els) => { if (els.length) selectMember(datasets[els[0].datasetIndex].label, true); }
+      onClick: (_, els) => { if (els.length) selectPlayer(datasets[els[0].datasetIndex].label, true); }
     }
   });
 }
@@ -364,24 +364,24 @@ function renderRace() {
 function renderWeekly() {
   const eps = Array.from({ length: state.through }, (_, i) => i + 1);
   const evs = visibleEvents();
-  const cell = (m, ep) => sum(evs.filter((e) => e.member === m && e.ep === ep));
+  const cell = (m, ep) => sum(evs.filter((e) => e.player === m && e.ep === ep));
   let max = 1;
-  D.members.forEach((m) => eps.forEach((ep) => { max = Math.max(max, Math.abs(cell(m, ep))); }));
+  D.players.forEach((m) => eps.forEach((ep) => { max = Math.max(max, Math.abs(cell(m, ep))); }));
 
-  const head = `<thead><tr><th>Member</th>${eps.map((e) => `<th>Ep ${e}</th>`).join("")}<th>Total</th></tr></thead>`;
-  const body = D.members.map((m) => {
+  const head = `<thead><tr><th>Player</th>${eps.map((e) => `<th>Ep ${e}</th>`).join("")}<th>Total</th></tr></thead>`;
+  const body = D.players.map((m) => {
     const cells = eps.map((ep) => {
       const v = cell(m, ep);
       const bg = hexA(D.color[m], 0.08 + 0.55 * Math.abs(v) / max);
-      return `<td class="wk" style="background:${bg}"><button data-member="${esc(m)}" data-ep="${ep}" aria-label="${esc(m)}, episode ${ep}, ${fmt(v)} points. Show events.">${fmt(v)}</button></td>`;
+      return `<td class="wk" style="background:${bg}"><button data-player="${esc(m)}" data-ep="${ep}" aria-label="${esc(m)}, episode ${ep}, ${fmt(v)} points. Show events.">${fmt(v)}</button></td>`;
     }).join("");
-    return `<tr><td><span class="dot" style="background:${D.color[m]}"></span> ${esc(m)}</td>${cells}<td class="tot">${fmt(sum(evs.filter((e) => e.member === m)))}</td></tr>`;
+    return `<tr><td><span class="dot" style="background:${D.color[m]}"></span> ${esc(m)}</td>${cells}<td class="tot">${fmt(sum(evs.filter((e) => e.player === m)))}</td></tr>`;
   }).join("");
   $("weeklyTable").innerHTML = head + `<tbody>${body}</tbody>`;
 
   document.querySelectorAll("#weeklyTable button").forEach((b) =>
     b.addEventListener("click", () => {
-      selectMember(b.dataset.member, false);
+      selectPlayer(b.dataset.player, false);
       state.filter.episode = parseInt(b.dataset.ep, 10);
       renderDrill();
       $("drill").scrollIntoView();
@@ -391,8 +391,8 @@ function renderWeekly() {
 /* ------------------------------------------------------------------ *
  *  Drill-down
  * ------------------------------------------------------------------ */
-function selectMember(member, scroll) {
-  state.member = member;
+function selectPlayer(player, scroll) {
+  state.player = player;
   state.filter = { contestant: null, episode: null, action: null };
   renderDrill();
   if (scroll) $("drill").scrollIntoView();
@@ -403,12 +403,12 @@ function toggleFilter(dim, value) {
   renderDrill();
 }
 
-// Rows for the current member and filters. `ignore` leaves one filter out,
+// Rows for the current player and filters. `ignore` leaves one filter out,
 // so a chart can still show the alternatives to what you've selected.
 function drillRows(ignore) {
   const f = state.filter;
   return visibleEvents().filter((e) =>
-    (state.member === ALL || e.member === state.member) &&
+    (state.player === ALL || e.player === state.player) &&
     (ignore === "contestant" || !f.contestant || e.contestant === f.contestant) &&
     (ignore === "episode" || !f.episode || e.ep === f.episode) &&
     (ignore === "action" || !f.action || e.action === f.action));
@@ -424,17 +424,17 @@ function renderDrill() {
 }
 
 function renderChips() {
-  const items = [[ALL, "Everyone", "#10261E"], ...D.members.map((m) => [m, m, D.color[m]])];
-  $("memberChips").innerHTML = items.map(([id, label, color]) =>
-    `<button class="chip" data-id="${esc(id)}" aria-pressed="${state.member === id}"><span class="dot" style="background:${color}"></span>${esc(label)}</button>`).join("");
-  document.querySelectorAll("#memberChips .chip").forEach((b) =>
-    b.addEventListener("click", () => selectMember(b.dataset.id, false)));
+  const items = [[ALL, "Everyone", "#10261E"], ...D.players.map((m) => [m, m, D.color[m]])];
+  $("playerChips").innerHTML = items.map(([id, label, color]) =>
+    `<button class="chip" data-id="${esc(id)}" aria-pressed="${state.player === id}"><span class="dot" style="background:${color}"></span>${esc(label)}</button>`).join("");
+  document.querySelectorAll("#playerChips .chip").forEach((b) =>
+    b.addEventListener("click", () => selectPlayer(b.dataset.id, false)));
 }
 
 function renderSummary() {
   const rows = drillRows();
   const f = state.filter;
-  const who = state.member === ALL ? "Everyone" : state.member;
+  const who = state.player === ALL ? "Everyone" : state.player;
   const active = f.contestant || f.episode || f.action;
   $("summary").textContent = active
     ? `${who}: ${fmt(sum(rows))} points from ${rows.length} events`
@@ -474,7 +474,7 @@ function barChart(key, boxId, labels, values, colors, dim, indexAxis) {
 function renderContestantChart() {
   const rows = drillRows("contestant");
   const totals = groupSum(rows, (r) => r.contestant);
-  const pool = state.member === ALL ? Object.keys(D.owner) : D.picks[state.member];
+  const pool = state.player === ALL ? Object.keys(D.owner) : D.picks[state.player];
   const labels = pool.slice().sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0));
   const sel = state.filter.contestant;
   const colors = labels.map((c) => hexA(D.color[D.owner[c]], sel && sel !== c ? 0.3 : 1));
@@ -485,7 +485,7 @@ function renderActionChart() {
   const rows = drillRows("action");
   const totals = groupSum(rows, (r) => r.action);
   const labels = D.actions.slice().sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0)).filter((a) => totals.has(a));
-  const base = state.member === ALL ? "#4F6D5F" : D.color[state.member];
+  const base = state.player === ALL ? "#4F6D5F" : D.color[state.player];
   const sel = state.filter.action;
   const colors = labels.map((a) => hexA(base, sel && sel !== a ? 0.3 : 1));
   barChart("action", "boxAction", labels, labels.map((a) => totals.get(a)), colors, "action", "y");
@@ -496,11 +496,11 @@ function renderEpisodeChart() {
   const eps = Array.from({ length: state.through }, (_, i) => i + 1);
   const sel = state.filter.episode;
   let series;
-  if (state.member === ALL) {
-    series = D.members.map((m) => ({ name: m, base: D.color[m], match: (r) => r.member === m }));
+  if (state.player === ALL) {
+    series = D.players.map((m) => ({ name: m, base: D.color[m], match: (r) => r.player === m }));
   } else {
     const shades = [1, 0.7, 0.45];
-    series = D.picks[state.member].map((c, i) => ({ name: c, base: D.color[state.member], alpha: shades[i % 3], match: (r) => r.contestant === c }));
+    series = D.picks[state.player].map((c, i) => ({ name: c, base: D.color[state.player], alpha: shades[i % 3], match: (r) => r.contestant === c }));
   }
   const datasets = series.map((s) => ({
     label: s.name,
@@ -525,11 +525,11 @@ function renderEpisodeChart() {
 
 function renderEvents() {
   const rows = drillRows().slice().sort((a, b) => b.ep - a.ep || a.contestant.localeCompare(b.contestant) || b.points - a.points);
-  const showMember = state.member === ALL;
-  const head = `<thead><tr><th>Episode</th><th>Draft pick</th>${showMember ? "<th>Member</th>" : ""}<th>Action</th><th>Points</th></tr></thead>`;
+  const showPlayer = state.player === ALL;
+  const head = `<thead><tr><th>Episode</th><th>Castaway</th>${showPlayer ? "<th>Player</th>" : ""}<th>Action</th><th>Points</th></tr></thead>`;
   const body = rows.length
-    ? rows.map((r) => `<tr><td>${r.ep}</td><td>${esc(r.contestant)}</td>${showMember ? `<td>${esc(r.member)}</td>` : ""}<td>${esc(r.action)}</td><td>${signed(r.points)}</td></tr>`).join("")
-    : `<tr><td colspan="${showMember ? 5 : 4}" class="hint">No scoring events match these filters.</td></tr>`;
+    ? rows.map((r) => `<tr><td>${r.ep}</td><td>${esc(r.contestant)}</td>${showPlayer ? `<td>${esc(r.player)}</td>` : ""}<td>${esc(r.action)}</td><td>${signed(r.points)}</td></tr>`).join("")
+    : `<tr><td colspan="${showPlayer ? 5 : 4}" class="hint">No scoring events match these filters.</td></tr>`;
   $("eventsTable").innerHTML = head + `<tbody>${body}</tbody>`;
 }
 
