@@ -277,13 +277,13 @@ async function init() {
     const ep = parseInt(e.episode, 10), points = parseFloat(e.points);
     if (!Number.isFinite(ep) || !Number.isFinite(points)) { bad.push(i + 2); return; }
     if (!D.owner[e.castaway]) { unknown.add(e.castaway); return; }
-    D.events.push({ ep, castaway: e.castaway, event: e.event, points, player: D.owner[e.castaway] });
+    D.events.push({ ep, castaway: e.castaway, action: e.event, points, player: D.owner[e.castaway] });
   });
   if (unknown.size) notice(`<strong>Some castaways aren't in drafts.csv</strong> and were skipped: ${[...unknown].map(esc).join(", ")}. Check spelling.`);
   if (bad.length) notice(`<strong>Some rows in events.csv were skipped</strong> because the episode or points weren't numbers (rows ${bad.slice(0, 10).join(", ")}${bad.length > 10 ? "…" : ""}).`);
 
   D.maxEp = Math.max(1, ...D.events.map((e) => e.ep));
-  D.events = [...new Set(D.events.map((e) => e.event))];
+  D.actions = [...new Set(D.events.map((e) => e.action))];
   state.through = D.maxEp;
 
   const sel = $("through");
