@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Survivor Fantasy League</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<style>
+  :root {
+    --paper: #ECF1ED;
+    --ink: #10261E;
+    --muted: #5A6E65;
+    --line: #C5D2CA;
+    --ember: #C8431B;
+    --display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--body); font-size: 17px; line-height: 1.5;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--ember); outline-offset: 2px; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* Header */
+  header { padding: 48px 0 28px; }
+  .masthead { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  h1 {
+    font-family: var(--display); font-weight: 800; letter-spacing: -0.03em;
+    font-size: clamp(2.6rem, 8vw, 5.5rem); line-height: 0.92; margin: 0;
+  }
+  .through { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: var(--muted); }
+  .through select {
+    font: 600 1.1rem var(--body); padding: 8px 12px; border: 2px solid var(--ink);
+    background: var(--paper); color: var(--ink); border-radius: 4px;
+  }
+
+  section { padding: 40px 0 8px; border-top: 3px solid var(--ink); margin-top: 32px; }
+  h2 { font-family: var(--display); font-weight: 700; font-size: 1.9rem; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 24px; max-width: 62ch; }
+  h3 { font-family: var(--display); font-weight: 700; font-size: 1.1rem; margin: 0 0 8px; }
+
+  /* Standings */
+  .lb { display: flex; flex-direction: column; }
+  .lb-row {
+    display: grid; grid-template-columns: 2.2rem minmax(0, 1.1fr) minmax(0, 1.6fr) 4.5rem 4.5rem;
+    align-items: center; gap: 16px; text-align: left;
+    padding: 14px 8px; background: none; border: 0; border-bottom: 1px solid var(--line);
+  }
+  .lb-row:hover { background: rgba(16, 38, 30, 0.05); }
+  .lb-rank { font: 800 1.6rem var(--display); color: var(--muted); }
+  .lb-name { font: 700 1.25rem var(--display); }
+  .lb-picks { display: block; font: 400 0.85rem var(--body); color: var(--muted); }
+  .lb-bar { height: 22px; background: rgba(16,38,30,0.07); border-radius: 2px; overflow: hidden; }
+  .lb-bar span { display: block; height: 100%; border-radius: 2px; }
+  .lb-total { font: 800 1.8rem var(--display); text-align: right; }
+  .lb-delta { font-size: 0.95rem; color: var(--muted); text-align: right; }
+  .lb-head { display: grid; grid-template-columns: 2.2rem minmax(0,1.1fr) minmax(0,1.6fr) 4.5rem 4.5rem; gap: 16px; padding: 0 8px 6px; font-size: 0.85rem; color: var(--muted); }
+  .lb-head span:nth-child(n+4) { text-align: right; }
+
+  /* Charts */
+  .chart-box { position: relative; width: 100%; }
+
+  /* Weekly table */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-weight: 600; font-size: 0.9rem; color: var(--muted); border-bottom: 2px solid var(--ink); }
+  tbody td { border-bottom: 1px solid var(--line); }
+  .wk { padding: 0; }
+  .wk button { width: 100%; padding: 8px 10px; background: none; border: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .wk button:hover { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .tot { font-weight: 700; }
+
+  /* Drilldown controls */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px;
+    border: 2px solid var(--ink); background: none; border-radius: 999px; font-weight: 600;
+  }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 40px; margin-bottom: 8px; }
+  .filter-tag {
+    background: var(--ember); color: #fff; border: 0; border-radius: 4px; padding: 4px 10px; font-weight: 600; font-size: 0.95rem;
+  }
+  .hint { color: var(--muted); font-size: 0.95rem; }
+  .summary { font: 700 1.5rem var(--display); letter-spacing: -0.01em; margin: 0 0 4px; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 40px; margin: 24px 0 40px; }
+  .grid .wide { grid-column: 1 / -1; }
+
+  .events { max-height: 460px; overflow: auto; border-top: 2px solid var(--ink); }
+  .events th { position: sticky; top: 0; background: var(--paper); }
+  .events td:nth-child(n+1), .events th:nth-child(n+1) { text-align: left; }
+  .events td:last-child, .events th:last-child { text-align: right; }
+
+  .notice { border-left: 5px solid var(--ember); background: #fff; padding: 14px 18px; margin: 16px 0; }
+  .notice code { background: var(--paper); padding: 1px 6px; border-radius: 3px; }
+
+  footer { padding: 48px 0 64px; color: var(--muted); font-size: 0.9rem; }
+
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+    .lb-head { display: none; }
+    .lb-row { grid-template-columns: 1.8rem 1fr 4rem; grid-template-areas: "rank name total" "bar bar bar"; row-gap: 8px; }
+    .lb-rank { grid-area: rank; } .lb-name { grid-area: name; } .lb-total { grid-area: total; }
+    .lb-bar { grid-area: bar; } .lb-delta { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap masthead">
+    <h1>Survivor<br>Fantasy League</h1>
+    <label class="through">Standings through
+      <select id="through" aria-label="Show standings through episode"></select>
+    </label>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="notices"></div>
+
+  <section id="standings">
+    <h2>Standings</h2>
+    <p class="lede">Total points for each member. Select a member to see where their points came from.</p>
+    <div class="lb-head"><span>Rank</span><span>Member</span><span></span><span>Total</span><span id="deltaHead"></span></div>
+    <div class="lb" id="leaderboard"></div>
+  </section>
+
+  <section id="race">
+    <h2>Score race</h2>
+    <p class="lede">Running total after each episode.</p>
+    <div class="chart-box" style="height: 380px"><canvas id="raceChart" role="img" aria-label="Line chart of each member's running total by episode"></canvas></div>
+  </section>
+
+  <section id="weekly">
+    <h2>Week by week</h2>
+    <p class="lede">Points each member earned in each episode. Select a cell to see the scoring events behind it.</p>
+    <div class="scroll"><table id="weeklyTable"></table></div>
+  </section>
+
+  <section id="drill">
+    <h2>Where the points came from</h2>
+    <p class="lede">Pick a member, then select any bar to filter the other charts and the event list below.</p>
+    <div class="chips" id="memberChips" role="group" aria-label="Member"></div>
+    <p class="summary" id="summary"></p>
+    <div class="filters" id="filters"></div>
+
+    <div class="grid">
+      <div>
+        <h3>By draft pick</h3>
+        <div class="chart-box" id="boxContestant"><canvas id="contestantChart"></canvas></div>
+      </div>
+      <div>
+        <h3>By action</h3>
+        <div class="chart-box" id="boxAction"><canvas id="actionChart"></canvas></div>
+      </div>
+      <div class="wide">
+        <h3>By episode</h3>
+        <div class="chart-box" style="height: 320px"><canvas id="episodeChart"></canvas></div>
+      </div>
+    </div>
+
+    <h3>Scoring events</h3>
+    <div class="events scroll"><table id="eventsTable"></table></div>
+  </section>
+</main>
+
+<footer class="wrap">
+  Data comes from <code>data/drafts.csv</code> and <code>data/events.csv</code>. Edit those files to update the site.
+</footer>
+
+<script>
+/* ------------------------------------------------------------------ *
+ *  Settings
+ * ------------------------------------------------------------------ */
+const DATA = { drafts: "data/drafts.csv", events: "data/events.csv" };
+
+// One colour per member, in the order members first appear in drafts.csv.
+// Chosen to stay distinguishable for most types of colour blindness.
+const MEMBER_COLORS = ["#E69F00", "#2E86C1", "#009E73", "#D55E00", "#CC79A7", "#6B4E9B", "#4F6D5F"];
+
+const ALL = "__all__";
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ------------------------------------------------------------------ *
+ *  State
+ * ------------------------------------------------------------------ */
+const D = {};   // loaded + derived data
+const state = {
+  through: 1,
+  member: ALL,
+  filter: { contestant: null, episode: null, action: null }
+};
+const charts = {};
+
+/* ------------------------------------------------------------------ *
+ *  Helpers
+ * ------------------------------------------------------------------ */
+const $ = (id) => document.getElementById(id);
+const sum = (rows) => rows.reduce((t, r) => t + r.points, 0);
+const fmt = (n) => (Number.isInteger(n) ? n : n.toFixed(1));
+const signed = (n) => (n > 0 ? "+" : "") + fmt(n);
+const hexA = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, "0");
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function loadCsv(path) {
+  const res = await fetch(path, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Could not load ${path} (HTTP ${res.status}).`);
+  const text = await res.text();
+  return Papa.parse(text, {
+    header: true, skipEmptyLines: true,
+    transformHeader: (h) => h.trim().toLowerCase(),
+    transform: (v) => v.trim()
+  }).data;
+}
+
+function groupSum(rows, keyFn) {
+  const m = new Map();
+  rows.forEach((r) => m.set(keyFn(r), (m.get(keyFn(r)) || 0) + r.points));
+  return m;
+}
+
+function notice(html) {
+  const div = document.createElement("div");
+  div.className = "notice";
+  div.innerHTML = html;
+  $("notices").appendChild(div);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Load + prepare data
+ * ------------------------------------------------------------------ */
+async function init() {
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.font.size = 13;
+  Chart.defaults.color = "#10261E";
+  Chart.defaults.animation = reduceMotion ? false : { duration: 350 };
+
+  let drafts, events;
+  try {
+    [drafts, events] = await Promise.all([loadCsv(DATA.drafts), loadCsv(DATA.events)]);
+  } catch (err) {
+    notice(`<strong>The data files didn't load.</strong> ${esc(err.message)}<br>
+      If you opened <code>index.html</code> directly from your computer, the browser blocks file loading.
+      Publish the site (for example on GitHub Pages) or run <code>python3 -m http.server</code> in this folder
+      and open <code>http://localhost:8000</code>.`);
+    return;
+  }
+
+  D.members = [...new Set(drafts.map((d) => d.member))];
+  D.color = Object.fromEntries(D.members.map((m, i) => [m, MEMBER_COLORS[i % MEMBER_COLORS.length]]));
+  D.owner = {};
+  D.picks = Object.fromEntries(D.members.map((m) => [m, []]));
+  drafts.forEach((d) => { D.owner[d.contestant] = d.member; D.picks[d.member].push(d.contestant); });
+
+  const unknown = new Set();
+  const bad = [];
+  D.events = [];
+  events.forEach((e, i) => {
+    const ep = parseInt(e.episode, 10), points = parseFloat(e.points);
+    if (!Number.isFinite(ep) || !Number.isFinite(points)) { bad.push(i + 2); return; }
+    if (!D.owner[e.contestant]) { unknown.add(e.contestant); return; }
+    D.events.push({ ep, contestant: e.contestant, action: e.action, points, member: D.owner[e.contestant] });
+  });
+  if (unknown.size) notice(`<strong>Some contestants aren't in drafts.csv</strong> and were skipped: ${[...unknown].map(esc).join(", ")}. Check spelling.`);
+  if (bad.length) notice(`<strong>Some rows in events.csv were skipped</strong> because the episode or points weren't numbers (rows ${bad.slice(0, 10).join(", ")}${bad.length > 10 ? "…" : ""}).`);
+
+  D.maxEp = Math.max(1, ...D.events.map((e) => e.ep));
+  D.actions = [...new Set(D.events.map((e) => e.action))];
+  state.through = D.maxEp;
+
+  const sel = $("through");
+  sel.innerHTML = Array.from({ length: D.maxEp }, (_, i) => `<option value="${i + 1}">Episode ${i + 1}</option>`).join("");
+  sel.value = state.through;
+  sel.addEventListener("change", () => {
+    state.through = parseInt(sel.value, 10);
+    if (state.filter.episode > state.through) state.filter.episode = null;
+    renderAll();
+  });
+
+  renderAll();
+}
+
+const visibleEvents = () => D.events.filter((e) => e.ep <= state.through);
+
+/* ------------------------------------------------------------------ *
+ *  Standings
+ * ------------------------------------------------------------------ */
+function renderStandings() {
+  const evs = visibleEvents();
+  const rows = D.members.map((m) => ({
+    member: m,
+    total: sum(evs.filter((e) => e.member === m)),
+    week: sum(evs.filter((e) => e.member === m && e.ep === state.through))
+  })).sort((a, b) => b.total - a.total);
+
+  const max = Math.max(1, ...rows.map((r) => r.total));
+  let prev = null, rank = 0;
+  rows.forEach((r, i) => { if (r.total !== prev) rank = i + 1; r.rank = rank; prev = r.total; });
+
+  $("deltaHead").textContent = `Ep ${state.through}`;
+  $("leaderboard").innerHTML = rows.map((r) => `
+    <button class="lb-row" data-member="${esc(r.member)}" aria-label="${esc(r.member)}, rank ${r.rank}, ${fmt(r.total)} points. Show breakdown.">
+      <span class="lb-rank">${r.rank}</span>
+      <span class="lb-name">${esc(r.member)}<span class="lb-picks">${D.picks[r.member].map(esc).join(", ")}</span></span>
+      <span class="lb-bar"><span style="width:${Math.max(0, r.total / max * 100)}%; background:${D.color[r.member]}"></span></span>
+      <span class="lb-total">${fmt(r.total)}</span>
+      <span class="lb-delta">${signed(r.week)}</span>
+    </button>`).join("");
+
+  document.querySelectorAll(".lb-row").forEach((b) =>
+    b.addEventListener("click", () => selectMember(b.dataset.member, true)));
+}
+
+/* ------------------------------------------------------------------ *
+ *  Score race (running total)
+ * ------------------------------------------------------------------ */
+function renderRace() {
+  const eps = Array.from({ length: state.through }, (_, i) => i + 1);
+  const evs = visibleEvents();
+  const datasets = D.members.map((m) => {
+    let running = 0;
+    return {
+      label: m,
+      data: eps.map((ep) => (running += sum(evs.filter((e) => e.member === m && e.ep === ep)))),
+      borderColor: D.color[m], backgroundColor: D.color[m],
+      borderWidth: 3, pointRadius: 4, pointHoverRadius: 6, tension: 0.15
+    };
+  });
+  if (charts.race) charts.race.destroy();
+  charts.race = new Chart($("raceChart"), {
+    type: "line",
+    data: { labels: eps.map((e) => "Ep " + e), datasets },
+    options: {
+      maintainAspectRatio: false,
+      interaction: { mode: "nearest", intersect: false, axis: "x" },
+      scales: { y: { beginAtZero: true, grid: { color: "#C5D2CA" }, title: { display: true, text: "Total points" } }, x: { grid: { display: false } } },
+      plugins: { legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 10 } } },
+      onClick: (_, els) => { if (els.length) selectMember(datasets[els[0].datasetIndex].label, true); }
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ *  Weekly table
+ * ------------------------------------------------------------------ */
+function renderWeekly() {
+  const eps = Array.from({ length: state.through }, (_, i) => i + 1);
+  const evs = visibleEvents();
+  const cell = (m, ep) => sum(evs.filter((e) => e.member === m && e.ep === ep));
+  let max = 1;
+  D.members.forEach((m) => eps.forEach((ep) => { max = Math.max(max, Math.abs(cell(m, ep))); }));
+
+  const head = `<thead><tr><th>Member</th>${eps.map((e) => `<th>Ep ${e}</th>`).join("")}<th>Total</th></tr></thead>`;
+  const body = D.members.map((m) => {
+    const cells = eps.map((ep) => {
+      const v = cell(m, ep);
+      const bg = hexA(D.color[m], 0.08 + 0.55 * Math.abs(v) / max);
+      return `<td class="wk" style="background:${bg}"><button data-member="${esc(m)}" data-ep="${ep}" aria-label="${esc(m)}, episode ${ep}, ${fmt(v)} points. Show events.">${fmt(v)}</button></td>`;
+    }).join("");
+    return `<tr><td><span class="dot" style="background:${D.color[m]}"></span> ${esc(m)}</td>${cells}<td class="tot">${fmt(sum(evs.filter((e) => e.member === m)))}</td></tr>`;
+  }).join("");
+  $("weeklyTable").innerHTML = head + `<tbody>${body}</tbody>`;
+
+  document.querySelectorAll("#weeklyTable button").forEach((b) =>
+    b.addEventListener("click", () => {
+      selectMember(b.dataset.member, false);
+      state.filter.episode = parseInt(b.dataset.ep, 10);
+      renderDrill();
+      $("drill").scrollIntoView();
+    }));
+}
+
+/* ------------------------------------------------------------------ *
+ *  Drill-down
+ * ------------------------------------------------------------------ */
+function selectMember(member, scroll) {
+  state.member = member;
+  state.filter = { contestant: null, episode: null, action: null };
+  renderDrill();
+  if (scroll) $("drill").scrollIntoView();
+}
+
+function toggleFilter(dim, value) {
+  state.filter[dim] = state.filter[dim] === value ? null : value;
+  renderDrill();
+}
+
+// Rows for the current member and filters. `ignore` leaves one filter out,
+// so a chart can still show the alternatives to what you've selected.
+function drillRows(ignore) {
+  const f = state.filter;
+  return visibleEvents().filter((e) =>
+    (state.member === ALL || e.member === state.member) &&
+    (ignore === "contestant" || !f.contestant || e.contestant === f.contestant) &&
+    (ignore === "episode" || !f.episode || e.ep === f.episode) &&
+    (ignore === "action" || !f.action || e.action === f.action));
+}
+
+function renderDrill() {
+  renderChips();
+  renderSummary();
+  renderContestantChart();
+  renderActionChart();
+  renderEpisodeChart();
+  renderEvents();
+}
+
+function renderChips() {
+  const items = [[ALL, "Everyone", "#10261E"], ...D.members.map((m) => [m, m, D.color[m]])];
+  $("memberChips").innerHTML = items.map(([id, label, color]) =>
+    `<button class="chip" data-id="${esc(id)}" aria-pressed="${state.member === id}"><span class="dot" style="background:${color}"></span>${esc(label)}</button>`).join("");
+  document.querySelectorAll("#memberChips .chip").forEach((b) =>
+    b.addEventListener("click", () => selectMember(b.dataset.id, false)));
+}
+
+function renderSummary() {
+  const rows = drillRows();
+  const f = state.filter;
+  const who = state.member === ALL ? "Everyone" : state.member;
+  const active = f.contestant || f.episode || f.action;
+  $("summary").textContent = active
+    ? `${who}: ${fmt(sum(rows))} points from ${rows.length} events`
+    : `${who}: ${fmt(sum(rows))} points through episode ${state.through}`;
+
+  const tags = [];
+  if (f.contestant) tags.push(["contestant", "Pick: " + f.contestant]);
+  if (f.episode) tags.push(["episode", "Episode " + f.episode]);
+  if (f.action) tags.push(["action", "Action: " + f.action]);
+  $("filters").innerHTML = tags.length
+    ? tags.map(([dim, label]) => `<button class="filter-tag" data-dim="${dim}" aria-label="Remove filter: ${esc(label)}">${esc(label)} ✕</button>`).join("")
+    : `<span class="hint">Select a bar to filter.</span>`;
+  document.querySelectorAll(".filter-tag").forEach((b) =>
+    b.addEventListener("click", () => { state.filter[b.dataset.dim] = null; renderDrill(); }));
+}
+
+function barChart(key, boxId, labels, values, colors, dim, indexAxis) {
+  if (charts[key]) charts[key].destroy();
+  const horizontal = indexAxis === "y";
+  if (horizontal) $(boxId).style.height = Math.max(150, labels.length * 30 + 40) + "px";
+  charts[key] = new Chart($(key + "Chart"), {
+    type: "bar",
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 2 }] },
+    options: {
+      indexAxis, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        [horizontal ? "x" : "y"]: { beginAtZero: true, grid: { color: "#C5D2CA" } },
+        [horizontal ? "y" : "x"]: { grid: { display: false } }
+      },
+      onClick: (_, els) => { if (els.length) toggleFilter(dim, labels[els[0].index]); },
+      onHover: (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; }
+    }
+  });
+}
+
+function renderContestantChart() {
+  const rows = drillRows("contestant");
+  const totals = groupSum(rows, (r) => r.contestant);
+  const pool = state.member === ALL ? Object.keys(D.owner) : D.picks[state.member];
+  const labels = pool.slice().sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0));
+  const sel = state.filter.contestant;
+  const colors = labels.map((c) => hexA(D.color[D.owner[c]], sel && sel !== c ? 0.3 : 1));
+  barChart("contestant", "boxContestant", labels, labels.map((c) => totals.get(c) || 0), colors, "contestant", "y");
+}
+
+function renderActionChart() {
+  const rows = drillRows("action");
+  const totals = groupSum(rows, (r) => r.action);
+  const labels = D.actions.slice().sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0)).filter((a) => totals.has(a));
+  const base = state.member === ALL ? "#4F6D5F" : D.color[state.member];
+  const sel = state.filter.action;
+  const colors = labels.map((a) => hexA(base, sel && sel !== a ? 0.3 : 1));
+  barChart("action", "boxAction", labels, labels.map((a) => totals.get(a)), colors, "action", "y");
+}
+
+function renderEpisodeChart() {
+  const rows = drillRows("episode");
+  const eps = Array.from({ length: state.through }, (_, i) => i + 1);
+  const sel = state.filter.episode;
+  let series;
+  if (state.member === ALL) {
+    series = D.members.map((m) => ({ name: m, base: D.color[m], match: (r) => r.member === m }));
+  } else {
+    const shades = [1, 0.7, 0.45];
+    series = D.picks[state.member].map((c, i) => ({ name: c, base: D.color[state.member], alpha: shades[i % 3], match: (r) => r.contestant === c }));
+  }
+  const datasets = series.map((s) => ({
+    label: s.name,
+    data: eps.map((ep) => sum(rows.filter((r) => r.ep === ep && s.match(r)))),
+    backgroundColor: eps.map((ep) => hexA(s.base, (s.alpha || 1) * (sel && sel !== ep ? 0.3 : 1))),
+    borderColor: "#ECF1ED", borderWidth: 1
+  }));
+
+  if (charts.episode) charts.episode.destroy();
+  charts.episode = new Chart($("episodeChart"), {
+    type: "bar",
+    data: { labels: eps.map((e) => "Ep " + e), datasets },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } },
+      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, grid: { color: "#C5D2CA" } } },
+      onClick: (_, els) => { if (els.length) toggleFilter("episode", els[0].index + 1); },
+      onHover: (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; }
+    }
+  });
+}
+
+function renderEvents() {
+  const rows = drillRows().slice().sort((a, b) => b.ep - a.ep || a.contestant.localeCompare(b.contestant) || b.points - a.points);
+  const showMember = state.member === ALL;
+  const head = `<thead><tr><th>Episode</th><th>Draft pick</th>${showMember ? "<th>Member</th>" : ""}<th>Action</th><th>Points</th></tr></thead>`;
+  const body = rows.length
+    ? rows.map((r) => `<tr><td>${r.ep}</td><td>${esc(r.contestant)}</td>${showMember ? `<td>${esc(r.member)}</td>` : ""}<td>${esc(r.action)}</td><td>${signed(r.points)}</td></tr>`).join("")
+    : `<tr><td colspan="${showMember ? 5 : 4}" class="hint">No scoring events match these filters.</td></tr>`;
+  $("eventsTable").innerHTML = head + `<tbody>${body}</tbody>`;
+}
+
+/* ------------------------------------------------------------------ */
+function renderAll() {
+  renderStandings();
+  renderRace();
+  renderWeekly();
+  renderDrill();
+}
+
+init();
+</script>
+</body>
+</html>
