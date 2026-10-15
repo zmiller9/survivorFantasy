@@ -62,6 +62,7 @@
   .lb-row:hover { background: rgba(16, 38, 30, 0.05); }
   .lb-rank { font: 800 1.6rem var(--display); color: var(--muted); }
   .lb-name { font: 700 1.25rem var(--display); }
+  .lb-picks .out { color: #C0392B; text-decoration: line-through; text-decoration-color: #000; text-decoration-thickness: 1.5px; }
   .lb-picks { display: block; font: 400 0.85rem var(--body); color: var(--muted); }
   .lb-bar { height: 22px; background: rgba(16,38,30,0.07); border-radius: 2px; overflow: hidden; }
   .lb-bar span { display: block; height: 100%; border-radius: 2px; }
@@ -171,10 +172,6 @@
         <h3>By event</h3>
         <div class="chart-box" id="boxAction"><canvas id="actionChart"></canvas></div>
       </div>
-      <div class="wide">
-        <h3>By episode</h3>
-        <div class="chart-box" style="height: 320px"><canvas id="episodeChart"></canvas></div>
-      </div>
     </div>
 
     <h3>Scoring events</h3>
@@ -269,6 +266,8 @@ async function init() {
   D.owner = {};
   D.picks = Object.fromEntries(D.players.map((m) => [m, []]));
   drafts.forEach((d) => { D.owner[d.castaway] = d.player; D.picks[d.player].push(d.castaway); });
+  // Castaways whose status is "out" in drafts.csv
+  D.out = new Set(drafts.filter((d) => (d.status || "").toLowerCase() === "out").map((d) => d.castaway));
 
   const unknown = new Set();
   const bad = [];
@@ -319,7 +318,7 @@ function renderStandings() {
   $("leaderboard").innerHTML = rows.map((r) => `
     <button class="lb-row" data-player="${esc(r.player)}" aria-label="${esc(r.player)}, rank ${r.rank}, ${fmt(r.total)} points. Show breakdown.">
       <span class="lb-rank">${r.rank}</span>
-      <span class="lb-name">${esc(r.player)}<span class="lb-picks">${D.picks[r.player].map(esc).join(", ")}</span></span>
+      <span class="lb-name">${esc(r.player)}<span class="lb-picks">${D.picks[r.player].map((c) => D.out.has(c) ? `<span class="out">${esc(c)}</span>` : esc(c)).join(", ")}</span></span>
       <span class="lb-bar"><span style="width:${Math.max(0, r.total / max * 100)}%; background:${D.color[r.player]}"></span></span>
       <span class="lb-total">${fmt(r.total)}</span>
       <span class="lb-delta">${signed(r.week)}</span>
@@ -369,13 +368,15 @@ function renderWeekly() {
   D.players.forEach((m) => eps.forEach((ep) => { max = Math.max(max, Math.abs(cell(m, ep))); }));
 
   const head = `<thead><tr><th>Player</th>${eps.map((e) => `<th>Ep ${e}</th>`).join("")}<th>Total</th></tr></thead>`;
-  const body = D.players.map((m) => {
+  const total = (m) => sum(evs.filter((e) => e.player === m));
+  const order = D.players.slice().sort((x, y) => total(y) - total(x));
+  const body = order.map((m) => {
     const cells = eps.map((ep) => {
       const v = cell(m, ep);
       const bg = hexA(D.color[m], 0.08 + 0.55 * Math.abs(v) / max);
       return `<td class="wk" style="background:${bg}"><button data-player="${esc(m)}" data-ep="${ep}" aria-label="${esc(m)}, episode ${ep}, ${fmt(v)} points. Show events.">${fmt(v)}</button></td>`;
     }).join("");
-    return `<tr><td><span class="dot" style="background:${D.color[m]}"></span> ${esc(m)}</td>${cells}<td class="tot">${fmt(sum(evs.filter((e) => e.player === m)))}</td></tr>`;
+    return `<tr><td><span class="dot" style="background:${D.color[m]}"></span> ${esc(m)}</td>${cells}<td class="tot">${fmt(total(m))}</td></tr>`;
   }).join("");
   $("weeklyTable").innerHTML = head + `<tbody>${body}</tbody>`;
 
@@ -419,7 +420,6 @@ function renderDrill() {
   renderSummary();
   renderCastawayChart();
   renderActionChart();
-  renderEpisodeChart();
   renderEvents();
 }
 
@@ -489,38 +489,6 @@ function renderActionChart() {
   const sel = state.filter.action;
   const colors = labels.map((a) => hexA(base, sel && sel !== a ? 0.3 : 1));
   barChart("action", "boxAction", labels, labels.map((a) => totals.get(a)), colors, "action", "y");
-}
-
-function renderEpisodeChart() {
-  const rows = drillRows("episode");
-  const eps = Array.from({ length: state.through }, (_, i) => i + 1);
-  const sel = state.filter.episode;
-  let series;
-  if (state.player === ALL) {
-    series = D.players.map((m) => ({ name: m, base: D.color[m], match: (r) => r.player === m }));
-  } else {
-    const shades = [1, 0.7, 0.45];
-    series = D.picks[state.player].map((c, i) => ({ name: c, base: D.color[state.player], alpha: shades[i % 3], match: (r) => r.castaway === c }));
-  }
-  const datasets = series.map((s) => ({
-    label: s.name,
-    data: eps.map((ep) => sum(rows.filter((r) => r.ep === ep && s.match(r)))),
-    backgroundColor: eps.map((ep) => hexA(s.base, (s.alpha || 1) * (sel && sel !== ep ? 0.3 : 1))),
-    borderColor: "#ECF1ED", borderWidth: 1
-  }));
-
-  if (charts.episode) charts.episode.destroy();
-  charts.episode = new Chart($("episodeChart"), {
-    type: "bar",
-    data: { labels: eps.map((e) => "Ep " + e), datasets },
-    options: {
-      maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } },
-      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, grid: { color: "#C5D2CA" } } },
-      onClick: (_, els) => { if (els.length) toggleFilter("episode", els[0].index + 1); },
-      onHover: (e, els) => { e.native.target.style.cursor = els.length ? "pointer" : "default"; }
-    }
-  });
 }
 
 function renderEvents() {
